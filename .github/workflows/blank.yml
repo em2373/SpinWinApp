@@ -1,34 +1,44 @@
 name: Build SpinWinApp APK
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "17"
+      - name: Extract SpinWin project
+        run: |
+          mkdir project
+          unzip -q SpinWinGitHubReady.zip -d project
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          gradle-version: "8.7"
+      - name: Find Gradle project
+        run: |
+          GRADLEW=$(find project -name gradlew -type f | head -1)
+
+          if [ -z "$GRADLEW" ]; then
+            echo "gradlew not found"
+            find project -maxdepth 3 -type f | head -100
+            exit 1
+          fi
+
+          echo "GRADLEW=$GRADLEW" >> $GITHUB_ENV
+          PROJECT_DIR=$(dirname "$GRADLEW")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+
+          chmod +x "$GRADLEW"
 
       - name: Build APK
-        run: gradle assembleDebug
+        run: |
+          cd "$PROJECT_DIR"
+          "$GRADLEW" assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
-        with:
-          name: SpinWinApp-APK
-          path: app/build/outputs/apk/debug/*.apk
