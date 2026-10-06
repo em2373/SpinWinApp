@@ -1,0 +1,42 @@
+name: Build SpinWinApp APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract SpinWin project
+        run: |
+          mkdir project
+          unzip -q SpinWinGitHubReady.zip -d project
+
+      - name: Find Gradle project
+        run: |
+          GRADLEW=$(find project -name gradlew -type f | head -1)
+          if [ -z "$GRADLEW" ]; then
+            echo "gradlew not found"
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$GRADLEW")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          chmod +x "$GRADLEW"
+
+      - name: Build APK
+        run: |
+          cd "$PROJECT_DIR"
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpinWinApp-debug
+          path: "**/build/outputs/apk/debug/*.apk"
